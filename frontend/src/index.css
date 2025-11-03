@@ -1,0 +1,6 @@
+@import 'tailwindcss';
+
+/* Optional global tweak */
+:root {
+  color-scheme: light;
+}

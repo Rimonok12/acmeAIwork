@@ -1,0 +1,1 @@
+The Bangladesh Labour Act, 2006 provides procedures for termination, including notice periods, cause, and compensation. Termination for misconduct must follow due process. Certain obligations, such as confidentiality or return of employer property, may survive termination, and statutory benefits like gratuity or provident fund follow the Act and relevant rules.
