@@ -1,5 +1,8 @@
+# backend/app/logic.py
+
 import os
 import re
+from typing import List, Dict, Any
 
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
 
@@ -9,37 +12,31 @@ DOC_INDEX = [
     ("doc3.md", "Bangladesh Labour Act, 2006 — Termination & Notice"),
 ]
 
-
-_BASE_STOPWORDS = {
+# Basic stopwords only (as in your version)
+_STOPWORDS = {
     "the","a","an","and","or","of","in","to","for","on","with","by","as",
     "is","are","was","were","be","been","being","that","this","it","at",
     "from","but","not","no","if","into","than","then","there","their","its",
 }
 
+# Simple alpha word tokenizer
+_token_re = re.compile(r"[A-Za-z]+")
 
-_LEGAL_STOPWORDS = {
-    "act", "section", "clause", "article", "bangladesh", "of", "the" 
-}
-
-_STOPWORDS = _BASE_STOPWORDS.union(_LEGAL_STOPWORDS)
-
-_token_re = re.compile(r"[A-Za-z][A-Za-z-]*[A-Za-z]")
-
-def _tokenize(text: str):
-    tokens = [t.lower() for t in _token_re.findall(text)]
-    return [t for t in tokens if len(t) > 2 and t not in _STOPWORDS]
+def _tokenize(text: str) -> List[str]:
+    tokens = [t.lower() for t in _token_re.findall(text or "")]
+    return [t for t in tokens if t not in _STOPWORDS]
 
 def _first_sentences(text: str, n: int = 2, fallback_chars: int = 280) -> str:
-    parts = re.split(r"(?<=[\.\?\!])\s+", text.strip())
+    parts = re.split(r"(?<=[\.\?\!])\s+", (text or "").strip())
     if parts and parts[0]:
         summary = " ".join(parts[:n]).strip()
         if len(summary) < 40:
-            return text[:fallback_chars].strip()
+            return (text or "")[:fallback_chars].strip()
         return summary
-    return text[:fallback_chars].strip()
+    return (text or "")[:fallback_chars].strip()
 
-def load_docs():
-    docs = []
+def load_docs() -> List[Dict[str, Any]]:
+    docs: List[Dict[str, Any]] = []
     for fname, title in DOC_INDEX:
         path = os.path.join(DATA_DIR, fname)
         body = ""
@@ -50,29 +47,35 @@ def load_docs():
             "id": os.path.splitext(fname)[0],
             "title": title,
             "body": body,
-            "tokens": set(_tokenize(body + " " + title)),
+            "tokens": set(_tokenize(f"{body} {title}")),
         })
     return docs
 
-
-def rank_search_results(query: str, docs):
-    q_tokens = set(_tokenize(query))
+def search_and_flag(query: str, docs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Boolean match: mark a doc as matched if ANY query token appears in its token set.
+    Returns matched docs first (alphabetical by title), then unmatched.
+    """
+    q_tokens = list(set(_tokenize(query)))
     if not q_tokens:
-        return [] 
+        # If query becomes empty (after stopword filtering), nothing matches.
+        return [{
+            "docId": d["id"],
+            "title": d["title"],
+            "summary": _first_sentences(d["body"], 2, 280),
+            "matched": False
+        } for d in docs]
 
-    results = []
+    results: List[Dict[str, Any]] = []
     for d in docs:
-        matching_tokens = q_tokens.intersection(d["tokens"])
-        score = len(matching_tokens)
+        matched = any(t in d["tokens"] for t in q_tokens)
+        results.append({
+            "docId": d["id"],
+            "title": d["title"],
+            "summary": _first_sentences(d["body"], 2, 280),
+            "matched": bool(matched),
+        })
 
-        if score > 0:
-            results.append({
-                "docId": d["id"],
-                "title": d["title"],
-                "summary": _first_sentences(d["body"], 2, 280),
-                "score": score,
-                "matched_tokens": list(matching_tokens) 
-            })
-            
-    results.sort(key=lambda r: r["score"], reverse=True)
+    # Sort: matched first, then by title
+    results.sort(key=lambda r: (not r["matched"], r["title"]))
     return results
