@@ -9,17 +9,25 @@ DOC_INDEX = [
     ("doc3.md", "Bangladesh Labour Act, 2006 — Termination & Notice"),
 ]
 
-_STOPWORDS = {
+
+_BASE_STOPWORDS = {
     "the","a","an","and","or","of","in","to","for","on","with","by","as",
     "is","are","was","were","be","been","being","that","this","it","at",
     "from","but","not","no","if","into","than","then","there","their","its",
 }
 
-_token_re = re.compile(r"[A-Za-z]+")
+
+_LEGAL_STOPWORDS = {
+    "act", "section", "clause", "article", "bangladesh", "of", "the" 
+}
+
+_STOPWORDS = _BASE_STOPWORDS.union(_LEGAL_STOPWORDS)
+
+_token_re = re.compile(r"[A-Za-z][A-Za-z-]*[A-Za-z]")
 
 def _tokenize(text: str):
     tokens = [t.lower() for t in _token_re.findall(text)]
-    return [t for t in tokens if t not in _STOPWORDS]
+    return [t for t in tokens if len(t) > 2 and t not in _STOPWORDS]
 
 def _first_sentences(text: str, n: int = 2, fallback_chars: int = 280) -> str:
     parts = re.split(r"(?<=[\.\?\!])\s+", text.strip())
@@ -46,26 +54,25 @@ def load_docs():
         })
     return docs
 
-def search_and_flag(query: str, docs):
-    q_tokens = list(set(_tokenize(query)))
+
+def rank_search_results(query: str, docs):
+    q_tokens = set(_tokenize(query))
     if not q_tokens:
-        # If empty after stopwords, nothing matches; return all, all unmatched
-        return [{
-            "docId": d["id"],
-            "title": d["title"],
-            "summary": _first_sentences(d["body"], 2, 280),
-            "matched": False
-        } for d in docs]
+        return [] 
 
     results = []
     for d in docs:
-        matched = any(t in d["tokens"] for t in q_tokens)
-        results.append({
-            "docId": d["id"],
-            "title": d["title"],
-            "summary": _first_sentences(d["body"], 2, 280),
-            "matched": bool(matched),
-        })
-    # show matched docs first, then others — still no numeric score
-    results.sort(key=lambda r: (not r["matched"], r["title"]))
+        matching_tokens = q_tokens.intersection(d["tokens"])
+        score = len(matching_tokens)
+
+        if score > 0:
+            results.append({
+                "docId": d["id"],
+                "title": d["title"],
+                "summary": _first_sentences(d["body"], 2, 280),
+                "score": score,
+                "matched_tokens": list(matching_tokens) 
+            })
+            
+    results.sort(key=lambda r: r["score"], reverse=True)
     return results
