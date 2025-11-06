@@ -32,11 +32,11 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-gray-50 to-gray-100 py-10">
+    <div className="min-h-screen bg-linear-to-br from-blue-200 to-cyan-600 py-10">
       <main className="max-w-3xl mx-auto px-5">
-        <div className="bg-white shadow-lg rounded-2xl p-6">
-          <h1 className="text-3xl font-semibold text-blue-700 mb-6 text-center">
-            Legal Document Search (Bangladesh • Mock)
+        <div className="bg-linear-to-br from-blue-100 to-cyan-200  shadow-lg rounded-2xl p-6">
+          <h1 className="text-3xl font-semibold text-cyan-800 mb-6 text-center">
+            Legal Document Search (Bangladesh)
           </h1>
 
           {error && (

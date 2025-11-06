@@ -1,4 +1,3 @@
-# backend/app/logic.py
 
 import os
 import re
@@ -12,14 +11,12 @@ DOC_INDEX = [
     ("doc3.md", "Bangladesh Labour Act, 2006 — Termination & Notice"),
 ]
 
-# Basic stopwords only (as in your version)
 _STOPWORDS = {
     "the","a","an","and","or","of","in","to","for","on","with","by","as",
     "is","are","was","were","be","been","being","that","this","it","at",
     "from","but","not","no","if","into","than","then","there","their","its",
 }
 
-# Simple alpha word tokenizer
 _token_re = re.compile(r"[A-Za-z]+")
 
 def _tokenize(text: str) -> List[str]:
@@ -52,13 +49,9 @@ def load_docs() -> List[Dict[str, Any]]:
     return docs
 
 def search_and_flag(query: str, docs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """
-    Boolean match: mark a doc as matched if ANY query token appears in its token set.
-    Returns matched docs first (alphabetical by title), then unmatched.
-    """
+ 
     q_tokens = list(set(_tokenize(query)))
     if not q_tokens:
-        # If query becomes empty (after stopword filtering), nothing matches.
         return [{
             "docId": d["id"],
             "title": d["title"],
@@ -76,6 +69,5 @@ def search_and_flag(query: str, docs: List[Dict[str, Any]]) -> List[Dict[str, An
             "matched": bool(matched),
         })
 
-    # Sort: matched first, then by title
     results.sort(key=lambda r: (not r["matched"], r["title"]))
     return results
